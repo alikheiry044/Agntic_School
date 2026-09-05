@@ -92,10 +92,12 @@
     gap: 8px;
     padding: 0 20px;
     margin-bottom: 18px;
+    flex-wrap: wrap;
   }
 
   .tab {
     flex: 1;
+    min-width: 120px;
     padding: 13px 12px;
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.1);
@@ -463,7 +465,7 @@
     background: transparent;
     border-radius: 9px;
     font-family: inherit;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
     color: var(--muted);
     cursor: pointer;
@@ -545,7 +547,7 @@
   }
 
   /* ===== Manage panel ===== */
-  .manage-panel {
+  .manage-panel, .teacher-panel {
     display: none;
     flex: 1;
     flex-direction: column;
@@ -581,7 +583,8 @@
   }
 
   .manage-form input,
-  .manage-form select {
+  .manage-form select,
+  .manage-form textarea {
     font-family: inherit;
     font-size: 13.5px;
     padding: 10px 12px;
@@ -590,10 +593,12 @@
     background: var(--paper);
     color: var(--ink);
     outline: none;
+    resize: vertical;
   }
 
   .manage-form input:focus,
-  .manage-form select:focus { border-color: var(--accent); }
+  .manage-form select:focus,
+  .manage-form textarea:focus { border-color: var(--accent); }
 
   .date-hint {
     font-size: 11px;
@@ -650,6 +655,7 @@
 
   .edit-btn { background: var(--accent-soft); color: var(--accent); }
   .delete-btn { background: #FBEAE7; color: var(--danger); }
+  .pay-btn { background: #E4F3E9; color: #2E7D4F; }
 
   .manage-feedback {
     font-size: 12.5px;
@@ -700,6 +706,42 @@
     margin: 6px 0 0;
     padding-inline-start: 18px;
   }
+
+  /* ===== Teacher info bar & tuition rows ===== */
+  .teacher-info-bar {
+    padding: 12px 20px;
+    background: #F5F0E1;
+    border-bottom: 1px solid var(--paper-line);
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  .teacher-info-bar b { color: var(--ink); }
+
+  .tuition-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    border: 1px solid var(--paper-line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+
+  .tuition-row .info { flex: 1; }
+  .tuition-row .amount { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .tuition-row .meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+  .tuition-status {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: 999px;
+  }
+
+  .tuition-status.paid { background: #E4F3E9; color: #2E7D4F; }
+  .tuition-status.unpaid { background: #FBEAE7; color: var(--danger); }
 </style>
 </head>
 <body>
@@ -716,6 +758,7 @@
     <button class="tab" data-mode="admin">👨‍💼 دستیار مدیر</button>
     <button class="tab" data-mode="reports">📋 گزارش‌ها</button>
     <button class="tab" data-mode="manage">🗂️ مدیریت داده</button>
+    <button class="tab" data-mode="teacher">👨‍🏫 پنل معلم</button>
   </div>
 
   <div class="panel">
@@ -798,7 +841,69 @@
           </form>
         </div>
 
+        <div class="manage-section">
+          <div class="manage-section-title">💰 مدیریت شهریه</div>
+          <form id="addTuitionForm" class="manage-form">
+            <select id="tuitionStudentId" required></select>
+            <input type="number" id="tuitionAmount" placeholder="مبلغ (تومان)" min="0" required />
+            <input type="text" id="tuitionDueDate" class="jalali-date" placeholder="۱۴۰۵/۰۵/۲۵" required inputmode="numeric" />
+            <div class="date-hint">تاریخ سررسید (شمسی)</div>
+            <input type="text" id="tuitionDescription" placeholder="توضیح (مثلاً قسط اول)" />
+            <button type="submit" class="manage-submit">ثبت قسط جدید</button>
+          </form>
+
+          <div style="margin-top:14px;">
+            <select id="tuitionViewStudentId" style="width:100%; margin-bottom:10px;"></select>
+            <div id="tuitionList" class="students-list"></div>
+          </div>
+        </div>
+
         <div class="manage-feedback" id="manageFeedback"></div>
+      </div>
+    </div>
+
+    <div class="teacher-panel" id="teacherPanel">
+      <div class="teacher-info-bar" id="teacherInfoBar"></div>
+      <div class="manage-scroll">
+
+        <div class="manage-section">
+          <div class="manage-section-title">📝 ثبت نمره</div>
+          <form id="teacherGradeForm" class="manage-form">
+            <select id="teacherGradeStudentId" required></select>
+            <input type="text" id="teacherGradeSubject" placeholder="نام درس" required />
+            <input type="number" id="teacherGradeScore" placeholder="نمره" step="0.25" min="0" max="20" required />
+            <input type="text" id="teacherGradeDate" class="jalali-date" placeholder="۱۴۰۵/۰۵/۲۵" required inputmode="numeric" />
+            <div class="date-hint">تاریخ شمسی (سال/ماه/روز)</div>
+            <button type="submit" class="manage-submit">ثبت نمره</button>
+          </form>
+        </div>
+
+        <div class="manage-section">
+          <div class="manage-section-title">📅 ثبت حضور و غیاب</div>
+          <form id="teacherAttendanceForm" class="manage-form">
+            <select id="teacherAttendanceStudentId" required></select>
+            <input type="text" id="teacherAttendanceDate" class="jalali-date" placeholder="۱۴۰۵/۰۵/۲۵" required inputmode="numeric" />
+            <div class="date-hint">تاریخ شمسی (سال/ماه/روز)</div>
+            <select id="teacherAttendanceStatus" required>
+              <option value="present">حاضر</option>
+              <option value="absent">غایب</option>
+            </select>
+            <button type="submit" class="manage-submit">ثبت</button>
+          </form>
+        </div>
+
+        <div class="manage-section">
+          <div class="manage-section-title">📋 گزارش ماهانه برای اولیا</div>
+          <form id="teacherReportForm" class="manage-form">
+            <select id="teacherReportStudentId" required></select>
+            <input type="text" id="teacherReportMonth" placeholder="ماه (مثلاً مهر)" required />
+            <textarea id="teacherReportAcademic" rows="2" placeholder="وضعیت تحصیلی" required></textarea>
+            <textarea id="teacherReportBehavior" rows="2" placeholder="وضعیت انضباطی" required></textarea>
+            <button type="submit" class="manage-submit">ثبت گزارش ماهانه</button>
+          </form>
+        </div>
+
+        <div class="manage-feedback" id="teacherFeedback"></div>
       </div>
     </div>
   </div>
@@ -815,6 +920,7 @@
     <div class="login-tabs">
       <button class="login-tab active" data-role="parent">👨‍👩‍👦 والد</button>
       <button class="login-tab" data-role="admin">👨‍💼 مدیر</button>
+      <button class="login-tab" data-role="teacher">👨‍🏫 معلم</button>
     </div>
 
     <form id="parentLoginForm" class="login-form">
@@ -833,6 +939,14 @@
       <button type="submit" class="login-submit">ورود</button>
     </form>
 
+    <form id="teacherLoginForm" class="login-form" style="display:none;">
+      <label>نام کاربری</label>
+      <input type="text" id="teacherUsername" placeholder="teacher1" required />
+      <label>رمز عبور</label>
+      <input type="password" id="teacherPassword" placeholder="••••" required />
+      <button type="submit" class="login-submit">ورود</button>
+    </form>
+
     <div class="login-error" id="loginError"></div>
   </div>
 </div>
@@ -848,6 +962,8 @@
 
   function jalaliToGregorian(jy, jm, jd) {
     jy = parseInt(jy, 10) + 1595;
+    jm = parseInt(jm, 10);
+    jd = parseInt(jd, 10);
     let days =
       -355668 +
       365 * jy +
@@ -890,6 +1006,8 @@
   let authRole = localStorage.getItem("school_ai_role") || null;
   let authStudentId = localStorage.getItem("school_ai_student_id") || null;
   let authName = localStorage.getItem("school_ai_name") || "";
+  let authSubject = localStorage.getItem("school_ai_subject") || "";
+  let authClassName = localStorage.getItem("school_ai_class_name") || "";
 
   const loginScreen = document.getElementById("loginScreen");
   const appEl = document.getElementById("app");
@@ -901,6 +1019,7 @@
   const loginTabs = document.querySelectorAll(".login-tab");
   const parentLoginForm = document.getElementById("parentLoginForm");
   const adminLoginForm = document.getElementById("adminLoginForm");
+  const teacherLoginForm = document.getElementById("teacherLoginForm");
 
   loginTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -909,6 +1028,7 @@
       const role = tab.dataset.role;
       parentLoginForm.style.display = role === "parent" ? "flex" : "none";
       adminLoginForm.style.display = role === "admin" ? "flex" : "none";
+      teacherLoginForm.style.display = role === "teacher" ? "flex" : "none";
       loginError.classList.remove("visible");
     });
   });
@@ -936,7 +1056,7 @@
       if (!res.ok) {
         showLoginError(data.detail || "ورود ناموفق بود");
       } else {
-        setAuth(data.access_token, "parent", studentId, data.student_name);
+        setAuth(data.access_token, "parent", { studentId, name: data.student_name });
         enterApp();
       }
     } catch (err) {
@@ -964,7 +1084,7 @@
       if (!res.ok) {
         showLoginError(data.detail || "ورود ناموفق بود");
       } else {
-        setAuth(data.access_token, "admin", null, "مدیر مدرسه");
+        setAuth(data.access_token, "admin", { name: "مدیر مدرسه" });
         enterApp();
       }
     } catch (err) {
@@ -974,15 +1094,52 @@
     }
   });
 
-  function setAuth(token, role, studentId, name) {
+  teacherLoginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    loginError.classList.remove("visible");
+    const username = document.getElementById("teacherUsername").value;
+    const password = document.getElementById("teacherPassword").value;
+    const btn = teacherLoginForm.querySelector("button");
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/teacher/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showLoginError(data.detail || "ورود ناموفق بود");
+      } else {
+        setAuth(data.access_token, "teacher", {
+          name: data.teacher_name,
+          subject: data.subject,
+          class_name: data.class_name,
+        });
+        enterApp();
+      }
+    } catch (err) {
+      showLoginError("ارتباط با سرور برقرار نشد.");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function setAuth(token, role, extra) {
     authToken = token;
     authRole = role;
-    authStudentId = studentId;
-    authName = name;
+    authName = extra.name || "";
+    authStudentId = extra.studentId || null;
+    authSubject = extra.subject || "";
+    authClassName = extra.class_name || "";
+
     localStorage.setItem("school_ai_token", token);
     localStorage.setItem("school_ai_role", role);
-    if (studentId) localStorage.setItem("school_ai_student_id", studentId);
-    localStorage.setItem("school_ai_name", name);
+    localStorage.setItem("school_ai_name", authName);
+    if (extra.studentId) localStorage.setItem("school_ai_student_id", extra.studentId);
+    if (extra.subject) localStorage.setItem("school_ai_subject", extra.subject);
+    if (extra.class_name) localStorage.setItem("school_ai_class_name", extra.class_name);
   }
 
   function clearAuth() {
@@ -990,25 +1147,42 @@
     authRole = null;
     authStudentId = null;
     authName = "";
+    authSubject = "";
+    authClassName = "";
     localStorage.removeItem("school_ai_token");
     localStorage.removeItem("school_ai_role");
     localStorage.removeItem("school_ai_student_id");
     localStorage.removeItem("school_ai_name");
+    localStorage.removeItem("school_ai_subject");
+    localStorage.removeItem("school_ai_class_name");
   }
 
   function enterApp() {
     loginScreen.style.display = "none";
     appEl.style.display = "flex";
-    loggedInAs.textContent = authRole === "admin" ? `👨‍💼 ${authName}` : `👨‍👩‍👦 والد ${authName}`;
 
-    // مدیر فقط دسترسی به تب "دستیار مدیر"، "گزارش‌ها" و "مدیریت داده" داره؛ والد فقط "دستیار والد"
+    if (authRole === "admin") {
+      loggedInAs.textContent = `👨‍💼 ${authName}`;
+    } else if (authRole === "teacher") {
+      loggedInAs.textContent = `👨‍🏫 ${authName}`;
+    } else {
+      loggedInAs.textContent = `👨‍👩‍👦 والد ${authName}`;
+    }
+
+    // هر نقش فقط تب‌های مخصوص خودش رو می‌بینه
     tabs.forEach((t) => {
       const m = t.dataset.mode;
       const visible =
         (authRole === "admin" && (m === "admin" || m === "reports" || m === "manage")) ||
-        (authRole === "parent" && m === "parent");
+        (authRole === "parent" && m === "parent") ||
+        (authRole === "teacher" && m === "teacher");
       t.style.display = visible ? "flex" : "none";
     });
+
+    if (authRole === "teacher") {
+      document.getElementById("teacherInfoBar").innerHTML =
+        `درس: <b>${authSubject}</b> &nbsp;·&nbsp; کلاس: <b>${authClassName}</b>`;
+    }
 
     const firstVisible = [...tabs].find((t) => t.style.display !== "none");
     if (firstVisible) firstVisible.click();
@@ -1074,6 +1248,7 @@
   const reportsList = document.getElementById("reportsList");
   const scanBtn = document.getElementById("scanBtn");
   const managePanel = document.getElementById("managePanel");
+  const teacherPanel = document.getElementById("teacherPanel");
 
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -1083,18 +1258,22 @@
 
       const isReports = mode === "reports";
       const isManage = mode === "manage";
-      const isChat = !isReports && !isManage;
+      const isTeacher = mode === "teacher";
+      const isChat = !isReports && !isManage && !isTeacher;
 
       messagesEl.style.display = isChat ? "block" : "none";
       suggestionsEl.style.display = isChat ? "flex" : "none";
       inputRow.style.display = isChat ? "flex" : "none";
       reportsPanel.style.display = isReports ? "flex" : "none";
       managePanel.style.display = isManage ? "flex" : "none";
+      teacherPanel.style.display = isTeacher ? "flex" : "none";
 
       if (isReports) {
         loadReports();
       } else if (isManage) {
         loadStudentsForManage();
+      } else if (isTeacher) {
+        loadStudentsForTeacher();
       } else {
         resetConversation();
       }
@@ -1251,7 +1430,7 @@
     if (e.key === "Enter") sendQuestion();
   });
 
-  // ===== Manage panel logic =====
+  // ===== Manage panel logic (admin) =====
   const studentsListEl = document.getElementById("studentsList");
   const manageFeedback = document.getElementById("manageFeedback");
   const addStudentForm = document.getElementById("addStudentForm");
@@ -1259,6 +1438,10 @@
   const addAttendanceForm = document.getElementById("addAttendanceForm");
   const gradeStudentSelect = document.getElementById("gradeStudentId");
   const attendanceStudentSelect = document.getElementById("attendanceStudentId");
+  const tuitionStudentSelect = document.getElementById("tuitionStudentId");
+  const tuitionViewStudentSelect = document.getElementById("tuitionViewStudentId");
+  const addTuitionForm = document.getElementById("addTuitionForm");
+  const tuitionListEl = document.getElementById("tuitionList");
 
   let manageStudentsCache = [];
 
@@ -1317,6 +1500,9 @@
       .join("");
     gradeStudentSelect.innerHTML = options;
     attendanceStudentSelect.innerHTML = options;
+    tuitionStudentSelect.innerHTML = options;
+    tuitionViewStudentSelect.innerHTML = options;
+    if (manageStudentsCache.length) loadTuitionsForStudent(manageStudentsCache[0].id);
   }
 
   async function deleteStudent(id) {
@@ -1381,7 +1567,7 @@
     try {
       const res = await fetch(`${API_BASE}/manage/students/import`, {
         method: "POST",
-        headers: authHeaders(), // توجه: Content-Type رو عمداً ست نمی‌کنیم، مرورگر خودش برای FormData درستش می‌کنه
+        headers: authHeaders(),
         body: formData,
       });
       if (res.status === 401 || res.status === 403) return handleAuthError();
@@ -1457,11 +1643,17 @@
         }),
       });
       if (res.status === 401 || res.status === 403) return handleAuthError();
-      if (!res.ok) throw new Error();
+      const resultData = await res.json();
+      if (!res.ok) {
+        const msg = Array.isArray(resultData.detail)
+          ? resultData.detail.map((d) => d.msg).join(" — ")
+          : resultData.detail || "خطا در ثبت نمره.";
+        throw new Error(msg);
+      }
       showManageFeedback("نمره با موفقیت ثبت شد.", false);
       addGradeForm.reset();
     } catch (err) {
-      showManageFeedback("خطا در ثبت نمره.", true);
+      showManageFeedback(err.message || "خطا در ثبت نمره.", true);
     } finally {
       btn.disabled = false;
     }
@@ -1487,11 +1679,238 @@
         }),
       });
       if (res.status === 401 || res.status === 403) return handleAuthError();
-      if (!res.ok) throw new Error();
+      const resultData = await res.json();
+      if (!res.ok) {
+        const msg = Array.isArray(resultData.detail)
+          ? resultData.detail.map((d) => d.msg).join(" — ")
+          : resultData.detail || "خطا در ثبت حضور و غیاب.";
+        throw new Error(msg);
+      }
       showManageFeedback("حضور و غیاب با موفقیت ثبت شد.", false);
       addAttendanceForm.reset();
     } catch (err) {
-      showManageFeedback("خطا در ثبت حضور و غیاب.", true);
+      showManageFeedback(err.message || "خطا در ثبت حضور و غیاب.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ===== Tuition (admin) =====
+  addTuitionForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = addTuitionForm.querySelector("button");
+    const gregorianDate = parseJalaliInput(document.getElementById("tuitionDueDate").value);
+    if (!gregorianDate) {
+      showManageFeedback("تاریخ سررسید را به‌صورت ۱۴۰۵/۰۵/۲۵ وارد کنید.", true);
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/manage/tuition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          student_id: Number(tuitionStudentSelect.value),
+          amount: Number(document.getElementById("tuitionAmount").value),
+          due_date: gregorianDate,
+          description: document.getElementById("tuitionDescription").value || "قسط شهریه",
+        }),
+      });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      const resultData = await res.json();
+      if (!res.ok) {
+        const msg = Array.isArray(resultData.detail)
+          ? resultData.detail.map((d) => d.msg).join(" — ")
+          : resultData.detail || "خطا در ثبت شهریه.";
+        throw new Error(msg);
+      }
+      showManageFeedback("قسط شهریه با موفقیت ثبت شد.", false);
+      addTuitionForm.reset();
+      loadTuitionsForStudent(tuitionViewStudentSelect.value);
+    } catch (err) {
+      showManageFeedback(err.message || "خطا در ثبت شهریه.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  tuitionViewStudentSelect.addEventListener("change", () => {
+    loadTuitionsForStudent(tuitionViewStudentSelect.value);
+  });
+
+  async function loadTuitionsForStudent(studentId) {
+    if (!studentId) return;
+    tuitionListEl.innerHTML = '<div class="empty-state"><span class="icon">⏳</span>در حال بارگذاری…</div>';
+    try {
+      const res = await fetch(`${API_BASE}/manage/tuition/student/${studentId}`, { headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      const tuitions = await res.json();
+      renderTuitions(tuitions);
+    } catch (err) {
+      tuitionListEl.innerHTML = '<div class="empty-state"><span class="icon">⚠️</span>ارتباط با سرور برقرار نشد.</div>';
+    }
+  }
+
+  function renderTuitions(tuitions) {
+    if (!tuitions.length) {
+      tuitionListEl.innerHTML = '<div class="empty-state">هیچ قسطی برای این دانش‌آموز ثبت نشده.</div>';
+      return;
+    }
+    tuitionListEl.innerHTML = "";
+    tuitions.forEach((t) => {
+      const row = document.createElement("div");
+      row.className = "tuition-row";
+      row.innerHTML = `
+        <div class="info">
+          <div class="amount">${Number(t.amount).toLocaleString("fa-IR")} تومان</div>
+          <div class="meta">${t.description || ""} · سررسید: ${t.due_date}</div>
+        </div>
+        <span class="tuition-status ${t.is_paid ? "paid" : "unpaid"}">${t.is_paid ? "پرداخت‌شده" : "پرداخت‌نشده"}</span>
+        ${t.is_paid ? "" : `<button class="pay-btn" data-id="${t.id}">✅ ثبت پرداخت</button>`}
+      `;
+      tuitionListEl.appendChild(row);
+    });
+
+    tuitionListEl.querySelectorAll(".pay-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        try {
+          await fetch(`${API_BASE}/manage/tuition/${btn.dataset.id}/pay`, { method: "POST", headers: authHeaders() });
+          loadTuitionsForStudent(tuitionViewStudentSelect.value);
+        } catch (err) {
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  // ===== Teacher panel logic =====
+  const teacherGradeForm = document.getElementById("teacherGradeForm");
+  const teacherAttendanceForm = document.getElementById("teacherAttendanceForm");
+  const teacherReportForm = document.getElementById("teacherReportForm");
+  const teacherFeedback = document.getElementById("teacherFeedback");
+  const teacherGradeStudentSelect = document.getElementById("teacherGradeStudentId");
+  const teacherAttendanceStudentSelect = document.getElementById("teacherAttendanceStudentId");
+  const teacherReportStudentSelect = document.getElementById("teacherReportStudentId");
+
+  function showTeacherFeedback(msg, isError) {
+    teacherFeedback.textContent = msg;
+    teacherFeedback.className = "manage-feedback " + (isError ? "error" : "success");
+    setTimeout(() => {
+      teacherFeedback.className = "manage-feedback";
+    }, 3500);
+  }
+
+  async function loadStudentsForTeacher() {
+    try {
+      const res = await fetch(`${API_BASE}/manage/students`, { headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      const students = await res.json();
+      const options = students
+        .map((s) => `<option value="${s.id}">${s.name} — ${s.class_name}</option>`)
+        .join("");
+      teacherGradeStudentSelect.innerHTML = options;
+      teacherAttendanceStudentSelect.innerHTML = options;
+      teacherReportStudentSelect.innerHTML = options;
+    } catch (err) {
+      showTeacherFeedback("ارتباط با سرور برقرار نشد.", true);
+    }
+  }
+
+  teacherGradeForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = teacherGradeForm.querySelector("button");
+    const gregorianDate = parseJalaliInput(document.getElementById("teacherGradeDate").value);
+    if (!gregorianDate) {
+      showTeacherFeedback("تاریخ را به‌صورت ۱۴۰۵/۰۵/۲۵ وارد کنید.", true);
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/teacher/grades`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          student_id: Number(teacherGradeStudentSelect.value),
+          subject: document.getElementById("teacherGradeSubject").value,
+          score: Number(document.getElementById("teacherGradeScore").value),
+          date: gregorianDate,
+        }),
+      });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      const resultData = await res.json();
+      if (!res.ok) {
+        const msg = Array.isArray(resultData.detail)
+          ? resultData.detail.map((d) => d.msg).join(" — ")
+          : resultData.detail || "خطا در ثبت نمره.";
+        throw new Error(msg);
+      }
+      showTeacherFeedback("نمره با موفقیت ثبت شد.", false);
+      teacherGradeForm.reset();
+    } catch (err) {
+      showTeacherFeedback(err.message || "خطا در ثبت نمره.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  teacherAttendanceForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = teacherAttendanceForm.querySelector("button");
+    const gregorianDate = parseJalaliInput(document.getElementById("teacherAttendanceDate").value);
+    if (!gregorianDate) {
+      showTeacherFeedback("تاریخ را به‌صورت ۱۴۰۵/۰۵/۲۵ وارد کنید.", true);
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/teacher/attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          student_id: Number(teacherAttendanceStudentSelect.value),
+          date: gregorianDate,
+          status: document.getElementById("teacherAttendanceStatus").value,
+        }),
+      });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      const resultData = await res.json();
+      if (!res.ok) {
+        const msg = Array.isArray(resultData.detail)
+          ? resultData.detail.map((d) => d.msg).join(" — ")
+          : resultData.detail || "خطا در ثبت حضور و غیاب.";
+        throw new Error(msg);
+      }
+      showTeacherFeedback("حضور و غیاب با موفقیت ثبت شد.", false);
+      teacherAttendanceForm.reset();
+    } catch (err) {
+      showTeacherFeedback(err.message || "خطا در ثبت حضور و غیاب.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  teacherReportForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = teacherReportForm.querySelector("button");
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/teacher/monthly-report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          student_id: Number(teacherReportStudentSelect.value),
+          month: document.getElementById("teacherReportMonth").value,
+          academic_comment: document.getElementById("teacherReportAcademic").value,
+          behavior_comment: document.getElementById("teacherReportBehavior").value,
+        }),
+      });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      if (!res.ok) throw new Error();
+      showTeacherFeedback("گزارش ماهانه با موفقیت ثبت شد.", false);
+      teacherReportForm.reset();
+    } catch (err) {
+      showTeacherFeedback("خطا در ثبت گزارش ماهانه.", true);
     } finally {
       btn.disabled = false;
     }

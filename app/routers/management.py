@@ -15,7 +15,7 @@ from ..schemas import (
     TeacherCreate,
     TeacherResponse,
 )
-from ..auth import require_admin, hash_password
+from ..auth import require_admin, hash_password, require_admin_or_teacher
 
 router = APIRouter(prefix="/manage", tags=["Management"])
 
@@ -73,16 +73,23 @@ def create_student(data: StudentCreate, db: Session = Depends(get_db), user: dic
 
 
 @router.get("/students")
-def list_students(db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+# def list_students(db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+# #     students = db.query(Student).all()
+# #     return [
+# #         {"id": s.id, "name": s.name, "class_name": s.class_name, "parent_name": s.parent_name}
+# #         for s in students
+# #     ]
+@router.get("/students")
+def list_students(db: Session = Depends(get_db), user: dict = Depends(require_admin_or_teacher)):
     students = db.query(Student).all()
     return [
         {"id": s.id, "name": s.name, "class_name": s.class_name, "parent_name": s.parent_name}
         for s in students
     ]
 
-
 @router.put("/students/{student_id}")
-def update_student(student_id: int, data: StudentUpdate, db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+def update_student(student_id: int, data: StudentUpdate, db: Session = Depends(get_db),
+                   user: dict = Depends(require_admin)):
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="دانش‌آموز پیدا نشد")
