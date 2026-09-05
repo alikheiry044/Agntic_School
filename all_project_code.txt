@@ -1,0 +1,999 @@
+
+============================================================
+FILE: .\.env
+============================================================
+
+
+SECRET_KEY=school-ai-2026-super-secret-key-change-this
+METIS_API_KEY=tpsg-5shvpXq3YeacItDmtgrWYoJb5d9BgPl
+METIS_BASE_URL=https://api.metisai.ir/openai/v1
+
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=school1234
+
+============================================================
+FILE: .\create_tables.py
+============================================================
+
+from app.database import Base, engine
+from app.models import Student, Grade, Attendance, Exam, Report
+
+Base.metadata.create_all(bind=engine)
+print("✅ همه جدول‌ها (از جمله reports) بررسی و ساخته شدند.")
+
+============================================================
+FILE: .\seed.py
+============================================================
+
+from datetime import date
+from app.database import Base, engine, SessionLocal
+from app.models import Student, Grade, Attendance, Exam
+
+# قدم ۱: ساخت واقعی جدول‌ها در دیتابیس
+Base.metadata.create_all(bind=engine)
+
+# قدم ۲: باز کردن یک Session برای کار با دیتابیس
+db = SessionLocal()
+
+# قدم ۳: ساخت یک دانش‌آموز نمونه
+ali = Student(
+    name="علی رضایی",
+    class_name="هشتم ۲",
+    parent_name="مریم رضایی"
+)
+db.add(ali)
+db.commit()
+db.refresh(ali)  # حالا ali.id مقدار واقعی گرفته
+
+# قدم ۴: ثبت چند نمره برای علی
+grades = [
+    Grade(student_id=ali.id, subject="ریاضی", score=15, date=date(2026, 6, 1)),
+    Grade(student_id=ali.id, subject="ریاضی", score=17, date=date(2026, 7, 1)),
+    Grade(student_id=ali.id, subject="علوم", score=12, date=date(2026, 7, 5)),
+]
+db.add_all(grades)
+
+# قدم ۵: ثبت چند رکورد حضور و غیاب
+attendances = [
+    Attendance(student_id=ali.id, date=date(2026, 8, 1), status="present"),
+    Attendance(student_id=ali.id, date=date(2026, 8, 2), status="absent"),
+    Attendance(student_id=ali.id, date=date(2026, 8, 3), status="present"),
+]
+db.add_all(attendances)
+
+# قدم ۶: ثبت یک امتحان نمونه
+exam = Exam(subject="ریاضی", class_name="هشتم ۲", date=date(2026, 8, 20))
+db.add(exam)
+
+# قدم ۷: ذخیره نهایی همه چیز
+db.commit()
+db.close()
+
+print("✅ داده‌های نمونه با موفقیت ثبت شدند.")
+
+============================================================
+FILE: .\seed_more.py
+============================================================
+
+from datetime import date
+from app.database import SessionLocal
+from app.models import Student, Grade, Attendance
+
+db = SessionLocal()
+
+# دانش‌آموز دوم: افت تحصیلی در علوم
+sara = Student(name="سارا کریمی", class_name="هشتم ۲", parent_name="زهرا کریمی")
+db.add(sara)
+db.commit()
+db.refresh(sara)
+
+db.add_all([
+    Grade(student_id=sara.id, subject="علوم", score=18, date=date(2026, 6, 1)),
+    Grade(student_id=sara.id, subject="علوم", score=11, date=date(2026, 7, 1)),
+    Grade(student_id=sara.id, subject="ریاضی", score=14, date=date(2026, 6, 1)),
+    Grade(student_id=sara.id, subject="ریاضی", score=13, date=date(2026, 7, 1)),
+])
+db.add_all([
+    Attendance(student_id=sara.id, date=date(2026, 8, 1), status="absent"),
+    Attendance(student_id=sara.id, date=date(2026, 8, 2), status="absent"),
+    Attendance(student_id=sara.id, date=date(2026, 8, 3), status="absent"),
+])
+
+# دانش‌آموز سوم: وضعیت پایدار و خوب
+mohammad = Student(name="محمد احمدی", class_name="هشتم ۱", parent_name="احمد احمدی")
+db.add(mohammad)
+db.commit()
+db.refresh(mohammad)
+
+db.add_all([
+    Grade(student_id=mohammad.id, subject="ریاضی", score=19, date=date(2026, 6, 1)),
+    Grade(student_id=mohammad.id, subject="ریاضی", score=19, date=date(2026, 7, 1)),
+])
+db.add_all([
+    Attendance(student_id=mohammad.id, date=date(2026, 8, 1), status="present"),
+    Attendance(student_id=mohammad.id, date=date(2026, 8, 2), status="present"),
+])
+
+db.commit()
+db.close()
+
+print("✅ دانش‌آموزان اضافه با موفقیت ثبت شدند.")
+
+============================================================
+FILE: .\set_passwords.py
+============================================================
+
+from app.database import SessionLocal
+from app.models import Student
+from app.auth import hash_password
+
+db = SessionLocal()
+
+# برای دموی فعلی، پسورد همه دانش‌آموزان رو یکسان می‌ذاریم: 1234
+# در محصول واقعی، هر خانواده باید پسورد اختصاصی خودش رو داشته باشه
+students = db.query(Student).all()
+
+for s in students:
+    s.hashed_password = hash_password("1234")
+
+db.commit()
+db.close()
+
+print(f"✅ پسورد برای {len(students)} دانش‌آموز تنظیم شد.")
+
+
+============================================================
+FILE: .\app\analytics.py
+============================================================
+
+from sqlalchemy.orm import Session
+from .models import Grade, Attendance
+
+
+def check_grade_drop(db: Session, student_id: int):
+    """
+    نمرات هر درس رو بر اساس تاریخ مرتب می‌کنه و آخرین نمره رو
+    با نمره قبلی مقایسه می‌کنه. اگه افت داشته باشه، گزارشش می‌کنه.
+    """
+    grades = (
+        db.query(Grade)
+        .filter(Grade.student_id == student_id)
+        .order_by(Grade.subject, Grade.date)
+        .all()
+    )
+
+    subjects = {}
+    for g in grades:
+        subjects.setdefault(g.subject, []).append(g)
+
+    report = []
+    for subject, records in subjects.items():
+        if len(records) < 2:
+            continue
+        last = records[-1]
+        previous = records[-2]
+        diff = last.score - previous.score
+        if diff < 0:
+            report.append({
+                "subject": subject,
+                "previous_score": previous.score,
+                "last_score": last.score,
+                "change": diff,
+                "status": "افت"
+            })
+        else:
+            report.append({
+                "subject": subject,
+                "previous_score": previous.score,
+                "last_score": last.score,
+                "change": diff,
+                "status": "پیشرفت" if diff > 0 else "ثابت"
+            })
+
+    return report
+
+
+def check_unusual_absence(db: Session, student_id: int, threshold: int = 2):
+    """
+    اگه تعداد غیبت‌های دانش‌آموز از threshold بیشتر باشه،
+    به‌عنوان غیبت غیرعادی گزارش می‌شه.
+    """
+    absences = (
+        db.query(Attendance)
+        .filter(Attendance.student_id == student_id, Attendance.status == "absent")
+        .all()
+    )
+
+    return {
+        "total_absences": len(absences),
+        "is_unusual": len(absences) >= threshold,
+        "dates": [a.date for a in absences],
+    }
+
+from .models import Student
+
+
+def get_school_wide_report(db: Session):
+    """
+    روی همه دانش‌آموزان مدرسه اجرا می‌شه و دانش‌آموزانی که
+    افت تحصیلی یا غیبت غیرعادی دارن رو مشخص می‌کنه.
+    """
+    students = db.query(Student).all()
+
+    report = []
+    for student in students:
+        grades_report = check_grade_drop(db, student.id)
+        attendance_report = check_unusual_absence(db, student.id)
+
+        drops = [g for g in grades_report if g["status"] == "افت"]
+
+        if drops or attendance_report["is_unusual"]:
+            report.append({
+                "student_id": student.id,
+                "name": student.name,
+                "class_name": student.class_name,
+                "grade_drops": drops,
+                "unusual_absence": attendance_report["is_unusual"],
+                "total_absences": attendance_report["total_absences"],
+            })
+
+    return report
+
+============================================================
+FILE: .\app\auth.py
+============================================================
+
+import os
+from datetime import datetime, timedelta
+from passlib.context import CryptContext
+from jose import jwt, JWTError
+from fastapi import Depends, HTTPException, Header
+
+SECRET_KEY = os.getenv("SECRET_KEY", "school-ai-secret-change-me")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def create_access_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_access_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        return None
+
+
+def get_current_user(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="ورود الزامی است")
+
+    token = authorization.split(" ")[1]
+    payload = decode_access_token(token)
+
+    if not payload:
+        raise HTTPException(status_code=401, detail="نشست شما منقضی شده، دوباره وارد شوید")
+
+    return payload
+
+
+def require_parent(user: dict = Depends(get_current_user)):
+    if user.get("role") != "parent":
+        raise HTTPException(status_code=403, detail="دسترسی غیرمجاز")
+    return user
+
+
+def require_admin(user: dict = Depends(get_current_user)):
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="دسترسی غیرمجاز")
+    return user
+
+============================================================
+FILE: .\app\database.py
+============================================================
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+
+DATABASE_URL = "sqlite:///./school.db"
+
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False}
+)
+
+
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
+
+
+Base = declarative_base()
+
+
+def get_db():
+    db = SessionLocal()
+
+    try:
+        yield db
+    finally:
+        db.close()
+
+============================================================
+FILE: .\app\main.py
+============================================================
+
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from app.routers import student, admin, auth, management
+
+app = FastAPI()
+
+app.include_router(auth.router)
+app.include_router(student.router)
+app.include_router(admin.router)
+app.include_router(management.router)
+
+app.mount("/app", StaticFiles(directory="app/static", html=True), name="static")
+
+
+@app.get("/")
+def read_root():
+    return {"message": "School AI is running"}
+
+============================================================
+FILE: .\app\models.py
+============================================================
+
+from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey
+from sqlalchemy.orm import relationship
+from .database import Base
+
+
+class Student(Base):
+    __tablename__ = "students"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    class_name = Column(String, nullable=False)
+    parent_name = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=True)   # ← این خط جدید
+
+    grades = relationship("Grade", back_populates="student")
+    attendances = relationship("Attendance", back_populates="student")
+    
+
+
+class Grade(Base):
+    __tablename__ = "grades"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    subject = Column(String, nullable=False)
+    score = Column(Float, nullable=False)
+    date = Column(Date, nullable=False)
+
+    student = relationship("Student", back_populates="grades")
+
+
+class Attendance(Base):
+    __tablename__ = "attendances"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    date = Column(Date, nullable=False)
+    status = Column(String, nullable=False)  # "present" یا "absent"
+
+    student = relationship("Student", back_populates="attendances")
+
+
+class Exam(Base):
+    __tablename__ = "exams"
+
+    id = Column(Integer, primary_key=True, index=True)
+    subject = Column(String, nullable=False)
+    class_name = Column(String, nullable=False)
+    date = Column(Date, nullable=False)
+
+
+from sqlalchemy import Text, DateTime
+from datetime import datetime
+
+
+class Report(Base):
+    __tablename__ = "reports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    content = Column(Text, nullable=False)
+    status = Column(String, default="pending")  # pending / approved / rejected
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    student = relationship("Student")
+
+
+
+============================================================
+FILE: .\app\schemas.py
+============================================================
+
+from pydantic import BaseModel
+from datetime import date
+
+
+class StudentCreate(BaseModel):
+    name: str
+    class_name: str
+    parent_name: str
+    password: str
+
+
+class StudentUpdate(BaseModel):
+    name: str | None = None
+    class_name: str | None = None
+    parent_name: str | None = None
+
+
+class GradeCreate(BaseModel):
+    student_id: int
+    subject: str
+    score: float
+    date: date
+
+
+class AttendanceCreate(BaseModel):
+    student_id: int
+    date: date
+    status: str  # "present" یا "absent"
+
+============================================================
+FILE: .\app\__init__.py
+============================================================
+
+
+
+============================================================
+FILE: .\app\agent\admin_agent.py
+============================================================
+
+import os
+from dotenv import load_dotenv
+from openai import OpenAI
+from sqlalchemy.orm import Session
+
+from ..analytics import get_school_wide_report
+
+load_dotenv()
+
+client = OpenAI(
+    api_key=os.getenv("METIS_API_KEY"),
+    base_url=os.getenv("METIS_BASE_URL"),
+)
+
+
+def ask_admin_agent(db: Session, question: str) -> str:
+    """
+    گزارش کلی مدرسه رو جمع می‌کنه و به مدل AI می‌ده تا
+    یک پاسخ مدیریتی و قابل‌فهم برای مدیر مدرسه بسازه.
+    """
+    report = get_school_wide_report(db)
+
+    context = f"""
+گزارش کلی دانش‌آموزانی که افت تحصیلی یا غیبت غیرعادی دارند:
+{report}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "تو دستیار هوشمند مدیریتی یک مدرسه هستی و به مدیر مدرسه "
+                    "به زبان فارسی، ساده و حرفه‌ای پاسخ می‌دی. فقط بر اساس "
+                    "اطلاعاتی که بهت داده می‌شه جواب بده، چیزی رو از خودت نساز. "
+                    "اگه گزارش خالی بود، بگو در حال حاضر مشکلی گزارش نشده."
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"{context}\n\nسؤال مدیر: {question}",
+            },
+        ],
+    )
+
+    return response.choices[0].message.content
+
+
+def generate_report_text(db: Session, student_name: str, class_name: str, drops, total_absences: int) -> str:
+    """
+    برای یک دانش‌آموز خاص که مشکل داره، یک متن گزارش کوتاه و
+    آماده برای نمایش به والد می‌سازه.
+    """
+    context = f"""
+دانش‌آموز: {student_name}
+کلاس: {class_name}
+افت نمرات: {drops}
+تعداد غیبت: {total_absences}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "تو دستیار هوشمند مدرسه هستی. یک گزارش کوتاه (حداکثر ۳ جمله)، "
+                    "مؤدبانه و به فارسی برای اطلاع‌رسانی به والد یک دانش‌آموز بساز "
+                    "که در آن افت تحصیلی یا غیبت غیرعادی داشته. فقط بر اساس اطلاعاتی "
+                    "که بهت داده می‌شه بنویس."
+                ),
+            },
+            {"role": "user", "content": context},
+        ],
+    )
+
+    return response.choices[0].message.content
+
+============================================================
+FILE: .\app\agent\parent_agent.py
+============================================================
+
+import os
+from dotenv import load_dotenv
+from openai import OpenAI
+from sqlalchemy.orm import Session
+
+from ..analytics import check_grade_drop, check_unusual_absence
+from ..models import Student
+
+load_dotenv()
+
+client = OpenAI(
+    api_key=os.getenv("METIS_API_KEY"),
+    base_url=os.getenv("METIS_BASE_URL"),
+)
+
+
+def ask_parent_agent(db: Session, student_id: int, question: str) -> str:
+    """
+    اطلاعات دانش‌آموز رو از دیتابیس جمع می‌کنه و به مدل AI می‌ده
+    تا یک جواب طبیعی و قابل‌فهم برای والد بسازه.
+    """
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        return "دانش‌آموزی با این مشخصات پیدا نشد."
+
+    grades_report = check_grade_drop(db, student_id)
+    attendance_report = check_unusual_absence(db, student_id)
+
+    context = f"""
+اطلاعات دانش‌آموز:
+نام: {student.name}
+کلاس: {student.class_name}
+
+گزارش نمرات:
+{grades_report}
+
+گزارش غیبت:
+{attendance_report}
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "تو دستیار هوشمند مدرسه هستی و به والدین دانش‌آموزان "
+                    "به زبان فارسی، ساده و دوستانه پاسخ می‌دی. فقط بر اساس "
+                    "اطلاعاتی که بهت داده می‌شه جواب بده، چیزی رو از خودت نساز."
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"{context}\n\nسؤال والد: {question}",
+            },
+        ],
+    )
+
+    return response.choices[0].message.content
+
+============================================================
+FILE: .\app\agent\__init__.py
+============================================================
+
+
+
+============================================================
+FILE: .\app\routers\admin.py
+============================================================
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from ..auth import require_admin
+from ..database import get_db
+from ..agent.admin_agent import ask_admin_agent, generate_report_text
+from ..analytics import get_school_wide_report
+from ..models import Report
+
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from ..database import get_db
+from ..agent.admin_agent import ask_admin_agent, generate_report_text
+from ..analytics import get_school_wide_report
+from ..models import Report
+from ..auth import require_admin
+
+router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+@router.get("/ask")
+def ask_admin(question: str, db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    answer = ask_admin_agent(db, question)
+    return {"answer": answer}
+
+
+@router.post("/scan")
+def scan_school(db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    issues = get_school_wide_report(db)
+    created = []
+
+    for item in issues:
+        existing = (
+            db.query(Report)
+            .filter(Report.student_id == item["student_id"], Report.status == "pending")
+            .first()
+        )
+        if existing:
+            continue
+
+        text = generate_report_text(
+            db,
+            student_name=item["name"],
+            class_name=item["class_name"],
+            drops=item["grade_drops"],
+            total_absences=item["total_absences"],
+        )
+
+        report = Report(student_id=item["student_id"], content=text, status="pending")
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+        created.append({"id": report.id, "student_name": item["name"], "content": text})
+
+    return {"new_reports": created, "total_students_with_issues": len(issues)}
+
+
+@router.get("/reports")
+def list_reports(status: str = "pending", db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    reports = db.query(Report).filter(Report.status == status).all()
+    return [
+        {
+            "id": r.id,
+            "student_name": r.student.name,
+            "content": r.content,
+            "status": r.status,
+            "created_at": r.created_at,
+        }
+        for r in reports
+    ]
+
+
+@router.post("/reports/{report_id}/approve")
+def approve_report(report_id: int, db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="گزارش پیدا نشد")
+    report.status = "approved"
+    db.commit()
+    return {"message": "گزارش تأیید شد", "id": report.id}
+
+
+@router.post("/reports/{report_id}/reject")
+def reject_report(report_id: int, db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="گزارش پیدا نشد")
+    report.status = "rejected"
+    db.commit()
+    return {"message": "گزارش رد شد", "id": report.id}
+
+============================================================
+FILE: .\app\routers\auth.py
+============================================================
+
+import os
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from ..database import get_db
+from ..models import Student
+from ..auth import verify_password, create_access_token
+
+router = APIRouter(prefix="/auth", tags=["Auth"])
+
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin1234")
+
+
+class ParentLoginRequest(BaseModel):
+    student_id: int
+    password: str
+
+
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@router.post("/parent/login")
+def parent_login(data: ParentLoginRequest, db: Session = Depends(get_db)):
+    student = db.query(Student).filter(Student.id == data.student_id).first()
+    if not student or not student.hashed_password:
+        raise HTTPException(status_code=401, detail="دانش‌آموز یا رمز عبور نادرست است")
+
+    if not verify_password(data.password, student.hashed_password):
+        raise HTTPException(status_code=401, detail="دانش‌آموز یا رمز عبور نادرست است")
+
+    token = create_access_token({"role": "parent", "student_id": student.id})
+    return {"access_token": token, "student_name": student.name}
+
+
+@router.post("/admin/login")
+def admin_login(data: AdminLoginRequest):
+    if data.username != ADMIN_USERNAME or data.password != ADMIN_PASSWORD:
+        raise HTTPException(status_code=401, detail="نام کاربری یا رمز عبور نادرست است")
+
+    token = create_access_token({"role": "admin"})
+    return {"access_token": token}
+
+============================================================
+FILE: .\app\routers\management.py
+============================================================
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy.orm import Session
+import openpyxl
+import io
+
+from ..database import get_db
+from ..models import Student, Grade, Attendance
+from ..schemas import StudentCreate, StudentUpdate, GradeCreate, AttendanceCreate
+from ..auth import require_admin, hash_password
+
+router = APIRouter(prefix="/manage", tags=["Management"])
+
+
+# ===== دانش‌آموزان =====
+
+@router.post("/students")
+def create_student(data: StudentCreate, db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    student = Student(
+        name=data.name,
+        class_name=data.class_name,
+        parent_name=data.parent_name,
+        hashed_password=hash_password(data.password),
+    )
+    db.add(student)
+    db.commit()
+    db.refresh(student)
+    return {"id": student.id, "name": student.name, "class_name": student.class_name}
+
+
+@router.get("/students")
+def list_students(db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    students = db.query(Student).all()
+    return [
+        {"id": s.id, "name": s.name, "class_name": s.class_name, "parent_name": s.parent_name}
+        for s in students
+    ]
+
+
+@router.put("/students/{student_id}")
+def update_student(student_id: int, data: StudentUpdate, db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="دانش‌آموز پیدا نشد")
+
+    if data.name is not None:
+        student.name = data.name
+    if data.class_name is not None:
+        student.class_name = data.class_name
+    if data.parent_name is not None:
+        student.parent_name = data.parent_name
+
+    db.commit()
+    return {"message": "بروزرسانی شد", "id": student.id}
+
+
+@router.delete("/students/{student_id}")
+def delete_student(student_id: int, db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="دانش‌آموز پیدا نشد")
+    db.delete(student)
+    db.commit()
+    return {"message": "دانش‌آموز حذف شد"}
+
+
+@router.post("/students/import")
+async def import_students(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """
+    فایل اکسل باید ۴ ستون داشته باشد به این ترتیب (بدون هدر یا با هدر، مهم نیست):
+    نام | کلاس | نام والد | رمز عبور
+    """
+    content = await file.read()
+    workbook = openpyxl.load_workbook(io.BytesIO(content))
+    sheet = workbook.active
+
+    created = []
+    errors = []
+
+    for i, row in enumerate(sheet.iter_rows(min_row=1, values_only=True), start=1):
+        if not row or not row[0]:
+            continue
+        if str(row[0]).strip() in ("نام", "name", "Name"):
+            continue
+
+        try:
+            name = str(row[0]).strip()
+            class_name = str(row[1]).strip()
+            parent_name = str(row[2]).strip()
+            password = str(row[3]).strip() if len(row) > 3 and row[3] else "1234"
+
+            student = Student(
+                name=name,
+                class_name=class_name,
+                parent_name=parent_name,
+                hashed_password=hash_password(password),
+            )
+            db.add(student)
+            db.commit()
+            db.refresh(student)
+            created.append({"row": i, "name": name})
+        except Exception as e:
+            db.rollback()
+            errors.append({"row": i, "error": str(e)})
+
+    return {"created": created, "errors": errors, "total_created": len(created)}
+
+
+# ===== نمرات =====
+
+@router.post("/grades")
+def create_grade(data: GradeCreate, db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    grade = Grade(student_id=data.student_id, subject=data.subject, score=data.score, date=data.date)
+    db.add(grade)
+    db.commit()
+    db.refresh(grade)
+    return {"id": grade.id, "subject": grade.subject, "score": grade.score}
+
+
+# ===== غیبت =====
+
+@router.post("/attendance")
+def create_attendance(data: AttendanceCreate, db: Session = Depends(get_db), user: dict = Depends(require_admin)):
+    record = Attendance(student_id=data.student_id, date=data.date, status=data.status)
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return {"id": record.id, "status": record.status}
+
+
+============================================================
+FILE: .\app\routers\parent.py
+============================================================
+
+
+
+============================================================
+FILE: .\app\routers\student.py
+============================================================
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from ..database import get_db
+from ..models import Student, Grade, Attendance, Exam
+from ..analytics import check_grade_drop, check_unusual_absence
+from ..agent.parent_agent import ask_parent_agent
+from ..auth import require_parent
+
+router = APIRouter(prefix="/students", tags=["Students"])
+
+
+@router.get("/{student_id}")
+def get_student(student_id: int, db: Session = Depends(get_db)):
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="دانش‌آموز پیدا نشد")
+    return {
+        "id": student.id,
+        "name": student.name,
+        "class_name": student.class_name,
+        "parent_name": student.parent_name,
+    }
+
+
+@router.get("/{student_id}/grades")
+def get_student_grades(student_id: int, db: Session = Depends(get_db)):
+    grades = db.query(Grade).filter(Grade.student_id == student_id).all()
+    return [
+        {"subject": g.subject, "score": g.score, "date": g.date}
+        for g in grades
+    ]
+
+
+@router.get("/{student_id}/attendance")
+def get_student_attendance(student_id: int, db: Session = Depends(get_db)):
+    records = db.query(Attendance).filter(Attendance.student_id == student_id).all()
+    return [
+        {"date": a.date, "status": a.status}
+        for a in records
+    ]
+
+
+@router.get("/exams/{class_name}")
+def get_exams(class_name: str, db: Session = Depends(get_db)):
+    exams = db.query(Exam).filter(Exam.class_name == class_name).all()
+    return [
+        {"subject": e.subject, "date": e.date}
+        for e in exams
+    ]
+
+
+@router.get("/{student_id}/analysis")
+def get_student_analysis(student_id: int, db: Session = Depends(get_db)):
+    return {
+        "grades_report": check_grade_drop(db, student_id),
+        "attendance_report": check_unusual_absence(db, student_id),
+    }
+
+
+@router.get("/{student_id}/ask")
+def ask_about_student(
+    student_id: int,
+    question: str,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_parent),
+):
+    if user["student_id"] != student_id:
+        raise HTTPException(status_code=403, detail="شما فقط به اطلاعات فرزند خودتان دسترسی دارید")
+
+    answer = ask_parent_agent(db, student_id, question)
+    return {"answer": answer}
+
+
+============================================================
+FILE: .\app\routers\__init__.py
+============================================================
+
+

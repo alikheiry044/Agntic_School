@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School AI — دستیار هوشمند مدرسه</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1E2A26;
+    --paper: #FBF7ED;
+    --paper-line: #E4DCC8;
+    --accent: #3B5BA5;
+    --accent-soft: #DCE4F2;
+    --mustard: #C9A227;
+    --muted: #6B7570;
+    --danger: #B5493E;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--ink);
+    font-family: 'Vazirmatn', sans-serif;
+    color: var(--ink);
+  }
+
+  body {
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(255,255,255,0.04), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(255,255,255,0.03), transparent 45%);
+  }
+
+  .app {
+    max-width: 640px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== Header ===== */
+  header {
+    padding: 28px 24px 20px;
+    text-align: center;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #C9D4CE;
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+    letter-spacing: 0.02em;
+  }
+
+  .badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #6FCF97;
+    box-shadow: 0 0 6px #6FCF97;
+  }
+
+  h1 {
+    color: var(--paper);
+    font-size: 26px;
+    font-weight: 800;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+
+  header p {
+    color: #8FA096;
+    font-size: 14px;
+    margin: 0;
+  }
+
+  /* ===== Tabs ===== */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px;
+    margin-bottom: 18px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 13px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: #B7C2BB;
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .tab:hover { background: rgba(255,255,255,0.08); }
+
+  .tab.active {
+    background: var(--paper);
+    color: var(--ink);
+    border-color: var(--paper);
+  }
+
+  /* ===== Chat panel ===== */
+  .panel {
+    flex: 1;
+    background: var(--paper);
+    border-radius: 22px 22px 0 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 -12px 40px rgba(0,0,0,0.35);
+  }
+
+  .student-select {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--paper-line);
+    background: #F5F0E1;
+  }
+
+  .student-select label {
+    font-size: 12.5px;
+    color: var(--muted);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .student-select select {
+    flex: 1;
+    font-family: inherit;
+    font-size: 13.5px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--paper-line);
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 22px 20px;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 33px,
+      var(--paper-line) 34px
+    );
+    min-height: 320px;
+    max-height: 52vh;
+  }
+
+  .msg {
+    max-width: 84%;
+    margin-bottom: 16px;
+    line-height: 1.9;
+    font-size: 14.5px;
+    animation: rise 0.25s ease;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.user {
+    margin-right: 0;
+    margin-left: auto;
+    text-align: right;
+  }
+
+  .msg.user .bubble {
+    background: var(--accent);
+    color: white;
+    border-radius: 16px 16px 4px 16px;
+  }
+
+  .msg.agent .bubble {
+    background: white;
+    color: var(--ink);
+    border: 1px solid var(--paper-line);
+    border-radius: 16px 16px 16px 4px;
+  }
+
+  .bubble {
+    display: inline-block;
+    padding: 12px 16px;
+    white-space: pre-wrap;
+  }
+
+  .msg.agent .label {
+    font-size: 11px;
+    color: var(--mustard);
+    font-weight: 700;
+    margin-bottom: 5px;
+    display: block;
+  }
+
+  .msg.error .bubble {
+    background: #FBEAE7;
+    color: var(--danger);
+    border: 1px solid #F0C9C2;
+  }
+
+  .typing {
+    display: inline-flex;
+    gap: 4px;
+    padding: 14px 16px;
+    background: white;
+    border: 1px solid var(--paper-line);
+    border-radius: 16px 16px 16px 4px;
+  }
+
+  .typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    opacity: 0.4;
+    animation: blink 1.2s infinite;
+  }
+
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes blink {
+    0%, 80%, 100% { opacity: 0.25; }
+    40% { opacity: 0.9; }
+  }
+
+  /* ===== Suggestions ===== */
+  .suggestions {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px 14px;
+    flex-wrap: wrap;
+    background: var(--paper);
+  }
+
+  .chip {
+    font-family: inherit;
+    font-size: 12.5px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--paper-line);
+    background: var(--accent-soft);
+    color: var(--accent);
+    cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+
+  .chip:hover { transform: translateY(-1px); }
+
+  /* ===== Input ===== */
+  .input-row {
+    display: flex;
+    gap: 10px;
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--paper-line);
+    background: var(--paper);
+  }
+
+  .input-row input {
+    flex: 1;
+    font-family: inherit;
+    font-size: 14.5px;
+    padding: 13px 16px;
+    border-radius: 12px;
+    border: 1.5px solid var(--paper-line);
+    background: white;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  .input-row input:focus { border-color: var(--accent); }
+
+  .send-btn {
+    width: 48px;
+    border-radius: 12px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover { background: #32498A; }
+  .send-btn:disabled { background: #B9C1D1; cursor: not-allowed; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: var(--paper-line); border-radius: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .msg, .typing span { animation: none !important; }
+  }
+
+  /* ===== Reports panel ===== */
+  .reports-panel {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .reports-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--paper-line);
+    background: #F5F0E1;
+  }
+
+  .reports-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .scan-btn {
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .scan-btn:hover { background: #32498A; }
+  .scan-btn:disabled { background: #B9C1D1; cursor: not-allowed; }
+
+  .reports-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 20px;
+    min-height: 320px;
+    max-height: 58vh;
+  }
+
+  .report-card {
+    background: white;
+    border: 1px solid var(--paper-line);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+    animation: rise 0.25s ease;
+  }
+
+  .report-card .student-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .report-card .content {
+    font-size: 13.5px;
+    line-height: 1.85;
+    color: var(--ink);
+    margin-bottom: 14px;
+  }
+
+  .report-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .report-actions button {
+    flex: 1;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 10px;
+    border-radius: 9px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+
+  .report-actions button:hover { opacity: 0.88; }
+  .report-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .approve-btn { background: #E4F3E9; color: #2E7D4F; }
+  .reject-btn { background: #FBEAE7; color: var(--danger); }
+
+  .empty-state {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+    padding: 60px 20px;
+    line-height: 1.9;
+  }
+
+  .empty-state .icon { font-size: 30px; display: block; margin-bottom: 10px; }
+
+  /* ===== Login screen ===== */
+  .login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 380px;
+    background: var(--paper);
+    border-radius: 20px;
+    padding: 32px 26px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+
+  .login-header { text-align: center; margin-bottom: 22px; }
+  .login-header h1 { color: var(--ink); font-size: 22px; margin: 0 0 6px; }
+  .login-header p { color: var(--muted); font-size: 13px; margin: 0; }
+
+  .login-tabs {
+    display: flex;
+    gap: 6px;
+    background: #F0EAD8;
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 22px;
+  }
+
+  .login-tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    border-radius: 9px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .login-tab.active { background: white; color: var(--ink); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+
+  .login-form { display: flex; flex-direction: column; gap: 6px; }
+
+  .login-form label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  .login-form input {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--paper-line);
+    background: white;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  .login-form input:focus { border-color: var(--accent); }
+
+  .login-submit {
+    margin-top: 18px;
+    padding: 13px;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .login-submit:hover { background: #32498A; }
+  .login-submit:disabled { background: #B9C1D1; cursor: not-allowed; }
+
+  .login-error {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #FBEAE7;
+    color: var(--danger);
+    font-size: 12.5px;
+    text-align: center;
+    display: none;
+  }
+
+  .login-error.visible { display: block; }
+
+  /* ===== Logged in bar (replaces old student-select) ===== */
+  .logout-btn {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--paper-line);
+    background: white;
+    color: var(--danger);
+    cursor: pointer;
+  }
+
+  #loggedInAs {
+    font-size: 12.5px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  /* ===== Manage panel ===== */
+  .manage-panel {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .manage-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 20px 26px;
+    max-height: 62vh;
+  }
+
+  .manage-section {
+    margin-bottom: 24px;
+  }
+
+  .manage-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  .manage-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: white;
+    border: 1px solid var(--paper-line);
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  .manage-form input,
+  .manage-form select {
+    font-family: inherit;
+    font-size: 13.5px;
+    padding: 10px 12px;
+    border-radius: 9px;
+    border: 1.5px solid var(--paper-line);
+    background: var(--paper);
+    color: var(--ink);
+    outline: none;
+  }
+
+  .manage-form input:focus,
+  .manage-form select:focus { border-color: var(--accent); }
+
+  .date-hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: -4px;
+    margin-bottom: 2px;
+  }
+
+  .manage-submit {
+    margin-top: 4px;
+    padding: 11px;
+    border-radius: 9px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .manage-submit:hover { background: #32498A; }
+  .manage-submit:disabled { background: #B9C1D1; cursor: not-allowed; }
+
+  .students-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .student-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    border: 1px solid var(--paper-line);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .student-row .info { flex: 1; }
+  .student-row .info .name { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .student-row .info .meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+  .student-row button {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+  }
+
+  .edit-btn { background: var(--accent-soft); color: var(--accent); }
+  .delete-btn { background: #FBEAE7; color: var(--danger); }
+
+  .manage-feedback {
+    font-size: 12.5px;
+    text-align: center;
+    padding: 10px;
+    border-radius: 10px;
+    display: none;
+  }
+
+  .manage-feedback.success { display: block; background: #E4F3E9; color: #2E7D4F; }
+  .manage-feedback.error { display: block; background: #FBEAE7; color: var(--danger); }
+
+  .excel-hint {
+    font-size: 11.5px;
+    color: var(--muted);
+    background: #F0EAD8;
+    border-radius: 9px;
+    padding: 9px 11px;
+    margin-bottom: 8px;
+    line-height: 1.7;
+  }
+
+  .import-result {
+    margin-top: 10px;
+    font-size: 12.5px;
+    display: none;
+  }
+
+  .import-result.visible { display: block; }
+
+  .import-summary {
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: #E4F3E9;
+    color: #2E7D4F;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .import-errors {
+    background: #FBEAE7;
+    color: var(--danger);
+    border-radius: 9px;
+    padding: 10px 12px;
+  }
+
+  .import-errors ul {
+    margin: 6px 0 0;
+    padding-inline-start: 18px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app" style="display:none;">
+  <header>
+    <div class="badge"><span class="dot"></span> متصل به دیتابیس مدرسه</div>
+    <h1>🏫 School AI</h1>
+    <p>دستیار هوشمند ارتباط با والدین و مدیریت مدرسه</p>
+  </header>
+
+  <div class="tabs" id="mainTabs">
+    <button class="tab active" data-mode="parent">👨‍👩‍👦 دستیار والد</button>
+    <button class="tab" data-mode="admin">👨‍💼 دستیار مدیر</button>
+    <button class="tab" data-mode="reports">📋 گزارش‌ها</button>
+    <button class="tab" data-mode="manage">🗂️ مدیریت داده</button>
+  </div>
+
+  <div class="panel">
+    <div class="student-select" id="studentSelectRow">
+      <span id="loggedInAs"></span>
+      <button class="logout-btn" id="logoutBtn">خروج</button>
+    </div>
+
+    <div class="messages" id="messages"></div>
+
+    <div class="suggestions" id="suggestions"></div>
+
+    <div class="input-row" id="inputRow">
+      <input type="text" id="questionInput" placeholder="سؤال خودتون رو بنویسید…" />
+      <button class="send-btn" id="sendBtn" aria-label="ارسال">➤</button>
+    </div>
+
+    <div class="reports-panel" id="reportsPanel">
+      <div class="reports-toolbar">
+        <span class="reports-title">گزارش‌های در انتظار تأیید</span>
+        <button class="scan-btn" id="scanBtn">🔍 اسکن مدرسه</button>
+      </div>
+      <div class="reports-list" id="reportsList"></div>
+    </div>
+
+    <div class="manage-panel" id="managePanel">
+      <div class="manage-scroll">
+
+        <div class="manage-section">
+          <div class="manage-section-title">➕ افزودن دانش‌آموز جدید</div>
+          <form id="addStudentForm" class="manage-form">
+            <input type="text" id="newStudentName" placeholder="نام و نام خانوادگی" required />
+            <input type="text" id="newStudentClass" placeholder="کلاس (مثلاً هشتم 2)" required />
+            <input type="text" id="newStudentParent" placeholder="نام والد" required />
+            <input type="password" id="newStudentPassword" placeholder="رمز عبور اولیه" required />
+            <button type="submit" class="manage-submit">افزودن دانش‌آموز</button>
+          </form>
+        </div>
+
+        <div class="manage-section">
+          <div class="manage-section-title">📊 ورود گروهی از اکسل</div>
+          <div class="excel-hint">
+            فایل باید ۴ ستون به این ترتیب داشته باشد: <b>نام</b>، <b>کلاس</b>، <b>نام والد</b>، <b>رمز عبور</b> (رمز اختیاری است، پیش‌فرض 1234)
+          </div>
+          <form id="importExcelForm" class="manage-form">
+            <input type="file" id="excelFile" accept=".xlsx,.xls" required />
+            <button type="submit" class="manage-submit">آپلود و ثبت گروهی</button>
+          </form>
+          <div id="importResult" class="import-result"></div>
+        </div>
+
+        <div class="manage-section">
+          <div class="manage-section-title">📋 لیست دانش‌آموزان</div>
+          <div id="studentsList" class="students-list"></div>
+        </div>
+
+        <div class="manage-section">
+          <div class="manage-section-title">📝 ثبت نمره جدید</div>
+          <form id="addGradeForm" class="manage-form">
+            <select id="gradeStudentId" required></select>
+            <input type="text" id="gradeSubject" placeholder="نام درس" required />
+            <input type="number" id="gradeScore" placeholder="نمره" step="0.25" min="0" max="20" required />
+            <input type="text" id="gradeDate" class="jalali-date" placeholder="۱۴۰۵/۰۵/۲۵" required inputmode="numeric" />
+            <div class="date-hint">تاریخ شمسی (سال/ماه/روز)</div>
+            <button type="submit" class="manage-submit">ثبت نمره</button>
+          </form>
+        </div>
+
+        <div class="manage-section">
+          <div class="manage-section-title">📅 ثبت حضور و غیاب</div>
+          <form id="addAttendanceForm" class="manage-form">
+            <select id="attendanceStudentId" required></select>
+            <input type="text" id="attendanceDate" class="jalali-date" placeholder="۱۴۰۵/۰۵/۲۵" required inputmode="numeric" />
+            <div class="date-hint">تاریخ شمسی (سال/ماه/روز)</div>
+            <select id="attendanceStatus" required>
+              <option value="present">حاضر</option>
+              <option value="absent">غایب</option>
+            </select>
+            <button type="submit" class="manage-submit">ثبت</button>
+          </form>
+        </div>
+
+        <div class="manage-feedback" id="manageFeedback"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Login Screen ===== -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>🏫 School AI</h1>
+      <p>برای ادامه، وارد حساب کاربری خود شوید</p>
+    </div>
+
+    <div class="login-tabs">
+      <button class="login-tab active" data-role="parent">👨‍👩‍👦 والد</button>
+      <button class="login-tab" data-role="admin">👨‍💼 مدیر</button>
+    </div>
+
+    <form id="parentLoginForm" class="login-form">
+      <label>شماره دانش‌آموزی</label>
+      <input type="number" id="parentStudentId" placeholder="مثلاً 1" required />
+      <label>رمز عبور</label>
+      <input type="password" id="parentPassword" placeholder="••••" required />
+      <button type="submit" class="login-submit">ورود</button>
+    </form>
+
+    <form id="adminLoginForm" class="login-form" style="display:none;">
+      <label>نام کاربری</label>
+      <input type="text" id="adminUsername" placeholder="admin" required />
+      <label>رمز عبور</label>
+      <input type="password" id="adminPassword" placeholder="••••" required />
+      <button type="submit" class="login-submit">ورود</button>
+    </form>
+
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = window.location.origin;
+
+  // ===== Jalali (Shamsi) date conversion =====
+  function toEnglishDigits(str) {
+    const persian = "۰۱۲۳۴۵۶۷۸۹";
+    return str.replace(/[۰-۹]/g, (d) => persian.indexOf(d));
+  }
+
+  function jalaliToGregorian(jy, jm, jd) {
+    jy = parseInt(jy, 10) + 1595;
+    let days =
+      -355668 +
+      365 * jy +
+      Math.floor(jy / 33) * 8 +
+      Math.floor(((jy % 33) + 3) / 4) +
+      jd +
+      (jm < 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186);
+    let gy = 400 * Math.floor(days / 146097);
+    days %= 146097;
+    if (days > 36524) {
+      gy += 100 * Math.floor(--days / 36524);
+      days %= 36524;
+      if (days >= 365) days++;
+    }
+    gy += 4 * Math.floor(days / 1461);
+    days %= 1461;
+    if (days > 365) {
+      gy += Math.floor((days - 1) / 365);
+      days = (days - 1) % 365;
+    }
+    let gd = days + 1;
+    const salA = [0, 31, (gy % 4 === 0 && gy % 100 !== 0) || gy % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let gm = 0;
+    for (gm = 1; gm <= 12 && gd > salA[gm]; gm++) gd -= salA[gm];
+    return { gy, gm, gd };
+  }
+
+  function parseJalaliInput(value) {
+    const clean = toEnglishDigits(value).trim();
+    const match = clean.match(/^(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})$/);
+    if (!match) return null;
+    const [, jy, jm, jd] = match;
+    const { gy, gm, gd } = jalaliToGregorian(jy, jm, jd);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${gy}-${pad(gm)}-${pad(gd)}`;
+  }
+
+  // ===== Auth state =====
+  let authToken = localStorage.getItem("school_ai_token") || null;
+  let authRole = localStorage.getItem("school_ai_role") || null;
+  let authStudentId = localStorage.getItem("school_ai_student_id") || null;
+  let authName = localStorage.getItem("school_ai_name") || "";
+
+  const loginScreen = document.getElementById("loginScreen");
+  const appEl = document.getElementById("app");
+  const loginError = document.getElementById("loginError");
+  const loggedInAs = document.getElementById("loggedInAs");
+  const mainTabs = document.getElementById("mainTabs");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  const loginTabs = document.querySelectorAll(".login-tab");
+  const parentLoginForm = document.getElementById("parentLoginForm");
+  const adminLoginForm = document.getElementById("adminLoginForm");
+
+  loginTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      loginTabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      const role = tab.dataset.role;
+      parentLoginForm.style.display = role === "parent" ? "flex" : "none";
+      adminLoginForm.style.display = role === "admin" ? "flex" : "none";
+      loginError.classList.remove("visible");
+    });
+  });
+
+  function showLoginError(msg) {
+    loginError.textContent = msg;
+    loginError.classList.add("visible");
+  }
+
+  parentLoginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    loginError.classList.remove("visible");
+    const studentId = document.getElementById("parentStudentId").value;
+    const password = document.getElementById("parentPassword").value;
+    const btn = parentLoginForm.querySelector("button");
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/parent/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ student_id: Number(studentId), password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showLoginError(data.detail || "ورود ناموفق بود");
+      } else {
+        setAuth(data.access_token, "parent", studentId, data.student_name);
+        enterApp();
+      }
+    } catch (err) {
+      showLoginError("ارتباط با سرور برقرار نشد.");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  adminLoginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    loginError.classList.remove("visible");
+    const username = document.getElementById("adminUsername").value;
+    const password = document.getElementById("adminPassword").value;
+    const btn = adminLoginForm.querySelector("button");
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        showLoginError(data.detail || "ورود ناموفق بود");
+      } else {
+        setAuth(data.access_token, "admin", null, "مدیر مدرسه");
+        enterApp();
+      }
+    } catch (err) {
+      showLoginError("ارتباط با سرور برقرار نشد.");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function setAuth(token, role, studentId, name) {
+    authToken = token;
+    authRole = role;
+    authStudentId = studentId;
+    authName = name;
+    localStorage.setItem("school_ai_token", token);
+    localStorage.setItem("school_ai_role", role);
+    if (studentId) localStorage.setItem("school_ai_student_id", studentId);
+    localStorage.setItem("school_ai_name", name);
+  }
+
+  function clearAuth() {
+    authToken = null;
+    authRole = null;
+    authStudentId = null;
+    authName = "";
+    localStorage.removeItem("school_ai_token");
+    localStorage.removeItem("school_ai_role");
+    localStorage.removeItem("school_ai_student_id");
+    localStorage.removeItem("school_ai_name");
+  }
+
+  function enterApp() {
+    loginScreen.style.display = "none";
+    appEl.style.display = "flex";
+    loggedInAs.textContent = authRole === "admin" ? `👨‍💼 ${authName}` : `👨‍👩‍👦 والد ${authName}`;
+
+    // مدیر فقط دسترسی به تب "دستیار مدیر"، "گزارش‌ها" و "مدیریت داده" داره؛ والد فقط "دستیار والد"
+    tabs.forEach((t) => {
+      const m = t.dataset.mode;
+      const visible =
+        (authRole === "admin" && (m === "admin" || m === "reports" || m === "manage")) ||
+        (authRole === "parent" && m === "parent");
+      t.style.display = visible ? "flex" : "none";
+    });
+
+    const firstVisible = [...tabs].find((t) => t.style.display !== "none");
+    if (firstVisible) firstVisible.click();
+  }
+
+  logoutBtn.addEventListener("click", () => {
+    clearAuth();
+    location.reload();
+  });
+
+  function authHeaders() {
+    return authToken ? { authorization: `Bearer ${authToken}` } : {};
+  }
+
+  // ===== App logic (chat, tabs, reports) =====
+  let mode = "parent";
+
+  const tabs = document.querySelectorAll(".tab");
+  const messagesEl = document.getElementById("messages");
+  const suggestionsEl = document.getElementById("suggestions");
+  const input = document.getElementById("questionInput");
+  const sendBtn = document.getElementById("sendBtn");
+
+  const parentSuggestions = [
+    "وضعیت درسی فرزندم چطوره؟",
+    "چند جلسه غیبت داشته؟",
+    "در کدوم درس افت داشته؟",
+  ];
+
+  const adminSuggestions = [
+    "کدام دانش‌آموزان افت تحصیلی داشته‌اند؟",
+    "وضعیت غیبت‌های این ماه چطوره؟",
+  ];
+
+  const welcomeMessages = {
+    parent: "سلام 👋 من دستیار هوشمند مدرسه‌ام. می‌تونید درباره نمرات، غیبت‌ها یا وضعیت کلی فرزندتون از من بپرسید.",
+    admin: "سلام مدیر عزیز 👋 می‌تونید درباره وضعیت تحصیلی و غیبت دانش‌آموزان مدرسه از من سؤال بپرسید.",
+  };
+
+  function renderSuggestions() {
+    const list = mode === "parent" ? parentSuggestions : adminSuggestions;
+    suggestionsEl.innerHTML = "";
+    list.forEach((text) => {
+      const chip = document.createElement("button");
+      chip.className = "chip";
+      chip.textContent = text;
+      chip.onclick = () => {
+        input.value = text;
+        sendQuestion();
+      };
+      suggestionsEl.appendChild(chip);
+    });
+  }
+
+  function resetConversation() {
+    messagesEl.innerHTML = "";
+    addMessage(welcomeMessages[mode] || "", "agent");
+    renderSuggestions();
+  }
+
+  const inputRow = document.getElementById("inputRow");
+  const reportsPanel = document.getElementById("reportsPanel");
+  const reportsList = document.getElementById("reportsList");
+  const scanBtn = document.getElementById("scanBtn");
+  const managePanel = document.getElementById("managePanel");
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      mode = tab.dataset.mode;
+
+      const isReports = mode === "reports";
+      const isManage = mode === "manage";
+      const isChat = !isReports && !isManage;
+
+      messagesEl.style.display = isChat ? "block" : "none";
+      suggestionsEl.style.display = isChat ? "flex" : "none";
+      inputRow.style.display = isChat ? "flex" : "none";
+      reportsPanel.style.display = isReports ? "flex" : "none";
+      managePanel.style.display = isManage ? "flex" : "none";
+
+      if (isReports) {
+        loadReports();
+      } else if (isManage) {
+        loadStudentsForManage();
+      } else {
+        resetConversation();
+      }
+    });
+  });
+
+  async function loadReports() {
+    reportsList.innerHTML = '<div class="empty-state"><span class="icon">⏳</span>در حال بارگذاری…</div>';
+    try {
+      const res = await fetch(`${API_BASE}/admin/reports?status=pending`, { headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      const reports = await res.json();
+      renderReports(reports);
+    } catch (err) {
+      reportsList.innerHTML = '<div class="empty-state"><span class="icon">⚠️</span>ارتباط با سرور برقرار نشد.</div>';
+    }
+  }
+
+  function renderReports(reports) {
+    if (!reports.length) {
+      reportsList.innerHTML = '<div class="empty-state"><span class="icon">✅</span>در حال حاضر گزارش در انتظار تأییدی وجود ندارد.<br>برای بررسی وضعیت جدید مدرسه، دکمه اسکن را بزنید.</div>';
+      return;
+    }
+    reportsList.innerHTML = "";
+    reports.forEach((r) => {
+      const card = document.createElement("div");
+      card.className = "report-card";
+      card.innerHTML = `
+        <div class="student-name">${r.student_name}</div>
+        <div class="content">${r.content}</div>
+        <div class="report-actions">
+          <button class="approve-btn" data-id="${r.id}" data-action="approve">✅ تأیید و اطلاع به والد</button>
+          <button class="reject-btn" data-id="${r.id}" data-action="reject">❌ رد گزارش</button>
+        </div>
+      `;
+      reportsList.appendChild(card);
+    });
+
+    reportsList.querySelectorAll("button[data-action]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        card_disable(btn);
+        try {
+          await fetch(`${API_BASE}/admin/reports/${id}/${action}`, { method: "POST", headers: authHeaders() });
+          loadReports();
+        } catch (err) {
+          card_enable(btn);
+        }
+      });
+    });
+  }
+
+  function card_disable(btn) {
+    btn.closest(".report-card").querySelectorAll("button").forEach((b) => (b.disabled = true));
+  }
+  function card_enable(btn) {
+    btn.closest(".report-card").querySelectorAll("button").forEach((b) => (b.disabled = false));
+  }
+
+  scanBtn.addEventListener("click", async () => {
+    scanBtn.disabled = true;
+    scanBtn.textContent = "در حال بررسی…";
+    try {
+      const res = await fetch(`${API_BASE}/admin/scan`, { method: "POST", headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      await loadReports();
+    } catch (err) {
+      reportsList.innerHTML = '<div class="empty-state"><span class="icon">⚠️</span>خطا در اسکن مدرسه.</div>';
+    } finally {
+      scanBtn.disabled = false;
+      scanBtn.textContent = "🔍 اسکن مدرسه";
+    }
+  });
+
+  function addMessage(text, type, label) {
+    const msg = document.createElement("div");
+    msg.className = "msg " + type;
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    if (label) {
+      const labelEl = document.createElement("span");
+      labelEl.className = "label";
+      labelEl.textContent = label;
+      msg.appendChild(labelEl);
+    }
+    bubble.textContent = text;
+    msg.appendChild(bubble);
+    messagesEl.appendChild(msg);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return msg;
+  }
+
+  function addTyping() {
+    const msg = document.createElement("div");
+    msg.className = "msg agent";
+    msg.id = "typingIndicator";
+    msg.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+    messagesEl.appendChild(msg);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById("typingIndicator");
+    if (el) el.remove();
+  }
+
+  function handleAuthError() {
+    removeTyping();
+    clearAuth();
+    location.reload();
+  }
+
+  async function sendQuestion() {
+    const question = input.value.trim();
+    if (!question) return;
+
+    addMessage(question, "user");
+    input.value = "";
+    sendBtn.disabled = true;
+    addTyping();
+
+    try {
+      let url;
+      if (mode === "parent") {
+        url = `${API_BASE}/students/${authStudentId}/ask?question=${encodeURIComponent(question)}`;
+      } else {
+        url = `${API_BASE}/admin/ask?question=${encodeURIComponent(question)}`;
+      }
+
+      const res = await fetch(url, { headers: authHeaders() });
+
+      if (res.status === 401) return handleAuthError();
+
+      const data = await res.json();
+      removeTyping();
+
+      if (!res.ok) {
+        addMessage(data.detail || "خطایی رخ داد. لطفاً دوباره تلاش کنید.", "error");
+      } else {
+        addMessage(data.answer, "agent", mode === "parent" ? "دستیار والد" : "دستیار مدیر");
+      }
+    } catch (err) {
+      removeTyping();
+      addMessage("ارتباط با سرور برقرار نشد. مطمئن شوید سرور روشن است.", "error");
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  sendBtn.addEventListener("click", sendQuestion);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendQuestion();
+  });
+
+  // ===== Manage panel logic =====
+  const studentsListEl = document.getElementById("studentsList");
+  const manageFeedback = document.getElementById("manageFeedback");
+  const addStudentForm = document.getElementById("addStudentForm");
+  const addGradeForm = document.getElementById("addGradeForm");
+  const addAttendanceForm = document.getElementById("addAttendanceForm");
+  const gradeStudentSelect = document.getElementById("gradeStudentId");
+  const attendanceStudentSelect = document.getElementById("attendanceStudentId");
+
+  let manageStudentsCache = [];
+
+  function showManageFeedback(msg, isError) {
+    manageFeedback.textContent = msg;
+    manageFeedback.className = "manage-feedback " + (isError ? "error" : "success");
+    setTimeout(() => {
+      manageFeedback.className = "manage-feedback";
+    }, 3500);
+  }
+
+  async function loadStudentsForManage() {
+    studentsListEl.innerHTML = '<div class="empty-state"><span class="icon">⏳</span>در حال بارگذاری…</div>';
+    try {
+      const res = await fetch(`${API_BASE}/manage/students`, { headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      manageStudentsCache = await res.json();
+      renderStudentsList();
+      fillStudentSelects();
+    } catch (err) {
+      studentsListEl.innerHTML = '<div class="empty-state"><span class="icon">⚠️</span>ارتباط با سرور برقرار نشد.</div>';
+    }
+  }
+
+  function renderStudentsList() {
+    if (!manageStudentsCache.length) {
+      studentsListEl.innerHTML = '<div class="empty-state">هنوز دانش‌آموزی ثبت نشده.</div>';
+      return;
+    }
+    studentsListEl.innerHTML = "";
+    manageStudentsCache.forEach((s) => {
+      const row = document.createElement("div");
+      row.className = "student-row";
+      row.innerHTML = `
+        <div class="info">
+          <div class="name">${s.name}</div>
+          <div class="meta">${s.class_name} · والد: ${s.parent_name}</div>
+        </div>
+        <button class="edit-btn" data-id="${s.id}">✏️ ویرایش</button>
+        <button class="delete-btn" data-id="${s.id}">🗑️ حذف</button>
+      `;
+      studentsListEl.appendChild(row);
+    });
+
+    studentsListEl.querySelectorAll(".delete-btn").forEach((btn) => {
+      btn.addEventListener("click", () => deleteStudent(btn.dataset.id));
+    });
+    studentsListEl.querySelectorAll(".edit-btn").forEach((btn) => {
+      btn.addEventListener("click", () => editStudentPrompt(btn.dataset.id));
+    });
+  }
+
+  function fillStudentSelects() {
+    const options = manageStudentsCache
+      .map((s) => `<option value="${s.id}">${s.name} — ${s.class_name}</option>`)
+      .join("");
+    gradeStudentSelect.innerHTML = options;
+    attendanceStudentSelect.innerHTML = options;
+  }
+
+  async function deleteStudent(id) {
+    if (!confirm("مطمئنید می‌خواهید این دانش‌آموز حذف شود؟ این عمل غیرقابل بازگشت است.")) return;
+    try {
+      const res = await fetch(`${API_BASE}/manage/students/${id}`, { method: "DELETE", headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      if (!res.ok) throw new Error();
+      showManageFeedback("دانش‌آموز حذف شد.", false);
+      loadStudentsForManage();
+    } catch (err) {
+      showManageFeedback("خطا در حذف دانش‌آموز.", true);
+    }
+  }
+
+  function editStudentPrompt(id) {
+    const student = manageStudentsCache.find((s) => String(s.id) === String(id));
+    if (!student) return;
+    const newName = prompt("نام جدید:", student.name);
+    if (newName === null) return;
+    const newClass = prompt("کلاس جدید:", student.class_name);
+    if (newClass === null) return;
+    const newParent = prompt("نام والد جدید:", student.parent_name);
+    if (newParent === null) return;
+    updateStudent(id, newName, newClass, newParent);
+  }
+
+  async function updateStudent(id, name, class_name, parent_name) {
+    try {
+      const res = await fetch(`${API_BASE}/manage/students/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ name, class_name, parent_name }),
+      });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      if (!res.ok) throw new Error();
+      showManageFeedback("اطلاعات دانش‌آموز بروزرسانی شد.", false);
+      loadStudentsForManage();
+    } catch (err) {
+      showManageFeedback("خطا در بروزرسانی اطلاعات.", true);
+    }
+  }
+
+  const importExcelForm = document.getElementById("importExcelForm");
+  const importResult = document.getElementById("importResult");
+
+  importExcelForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById("excelFile");
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const btn = importExcelForm.querySelector("button");
+    btn.disabled = true;
+    btn.textContent = "در حال آپلود…";
+    importResult.className = "import-result";
+    importResult.innerHTML = "";
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`${API_BASE}/manage/students/import`, {
+        method: "POST",
+        headers: authHeaders(), // توجه: Content-Type رو عمداً ست نمی‌کنیم، مرورگر خودش برای FormData درستش می‌کنه
+        body: formData,
+      });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      const data = await res.json();
+      if (!res.ok) throw new Error();
+
+      importResult.className = "import-result visible";
+      let html = `<div class="import-summary">✅ ${data.total_created} دانش‌آموز با موفقیت ثبت شد.</div>`;
+      if (data.errors && data.errors.length) {
+        html += `<div class="import-errors">⚠️ ${data.errors.length} ردیف با خطا مواجه شد:<ul>`;
+        data.errors.forEach((err) => {
+          html += `<li>ردیف ${err.row}: ${err.error}</li>`;
+        });
+        html += `</ul></div>`;
+      }
+      importResult.innerHTML = html;
+      importExcelForm.reset();
+      loadStudentsForManage();
+    } catch (err) {
+      importResult.className = "import-result visible";
+      importResult.innerHTML = `<div class="import-errors">خطا در آپلود فایل. مطمئن شوید فرمت فایل درست است.</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "آپلود و ثبت گروهی";
+    }
+  });
+
+  addStudentForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = addStudentForm.querySelector("button");
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/manage/students`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          name: document.getElementById("newStudentName").value,
+          class_name: document.getElementById("newStudentClass").value,
+          parent_name: document.getElementById("newStudentParent").value,
+          password: document.getElementById("newStudentPassword").value,
+        }),
+      });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      if (!res.ok) throw new Error();
+      showManageFeedback("دانش‌آموز جدید با موفقیت اضافه شد.", false);
+      addStudentForm.reset();
+      loadStudentsForManage();
+    } catch (err) {
+      showManageFeedback("خطا در افزودن دانش‌آموز.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  addGradeForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = addGradeForm.querySelector("button");
+    const gregorianDate = parseJalaliInput(document.getElementById("gradeDate").value);
+    if (!gregorianDate) {
+      showManageFeedback("تاریخ را به‌صورت ۱۴۰۵/۰۵/۲۵ وارد کنید.", true);
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/manage/grades`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          student_id: Number(gradeStudentSelect.value),
+          subject: document.getElementById("gradeSubject").value,
+          score: Number(document.getElementById("gradeScore").value),
+          date: gregorianDate,
+        }),
+      });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      if (!res.ok) throw new Error();
+      showManageFeedback("نمره با موفقیت ثبت شد.", false);
+      addGradeForm.reset();
+    } catch (err) {
+      showManageFeedback("خطا در ثبت نمره.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  addAttendanceForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = addAttendanceForm.querySelector("button");
+    const gregorianDate = parseJalaliInput(document.getElementById("attendanceDate").value);
+    if (!gregorianDate) {
+      showManageFeedback("تاریخ را به‌صورت ۱۴۰۵/۰۵/۲۵ وارد کنید.", true);
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${API_BASE}/manage/attendance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          student_id: Number(attendanceStudentSelect.value),
+          date: gregorianDate,
+          status: document.getElementById("attendanceStatus").value,
+        }),
+      });
+      if (res.status === 401 || res.status === 403) return handleAuthError();
+      if (!res.ok) throw new Error();
+      showManageFeedback("حضور و غیاب با موفقیت ثبت شد.", false);
+      addAttendanceForm.reset();
+    } catch (err) {
+      showManageFeedback("خطا در ثبت حضور و غیاب.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ===== Boot =====
+  if (authToken && authRole) {
+    enterApp();
+  } else {
+    loginScreen.style.display = "flex";
+    appEl.style.display = "none";
+  }
+</script>
+
+</body>
+</html>
