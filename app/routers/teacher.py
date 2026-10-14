@@ -1,34 +1,121 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
 
-from ..database import get_db
-from ..auth import require_teacher
-from ..models import Grade, Attendance, Report
-from ..schemas import GradeCreate, AttendanceCreate, MonthlyReportCreate
+from app.database import get_db
+from app.models import Teacher, Student, Grade, Attendance, Report
+from app.schemas import (
+    TeacherResponse,
+    GradeCreate, GradeResponse,
+    AttendanceCreate, AttendanceResponse,
+    MonthlyReportCreate, ReportResponse
+)
 
-router = APIRouter(prefix="/teacher", tags=["Teacher Panel"])
+router = APIRouter(prefix="/teachers", tags=["Teachers"])
 
 
-@router.post("/grades")
-def add_grade(data: GradeCreate, db: Session = Depends(get_db), user: dict = Depends(require_teacher)):
-    grade = Grade(student_id=data.student_id, subject=data.subject, score=data.score, date=data.date)
-    db.add(grade)
+# ۱. لیست همه معلم‌ها (برای فرانت‌اند که بخواد معلم انتخاب کنه)
+@router.get("/", response_model=List[TeacherResponse])
+def get_all_teachers(db: Session = Depends(get_db)):
+    return db.query(Teacher).all()
+
+
+# ۲. دریافت لیست دانش‌آموزان کلاسِ این معلم
+@router.get("/{teacher_id}/students", response_model=List[dict])
+def get_class_students(teacher_id: int, db: Session = Depends(get_db)):
+    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="معلم یافت نشد")
+
+    students = db.query(Student).filter(Student.class_name == teacher.class_name).all()
+    return [{"id": s.id, "name": s.name, "class_name": s.class_name} for s in students]
+
+
+# ۳. ثبت نمره توسط معلم (با بررسی هوشمند کلاس)
+@router.post("/{teacher_id}/grades", response_model=GradeResponse, status_code=201)
+def add_grade(teacher_id: int, grade_data: GradeCreate, db: Session = Depends(get_db)):
+    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="معلم یافت نشد")
+
+    student = db.query(Student).filter(Student.id == grade_data.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="دانش‌آموز یافت نشد")
+
+    if teacher.class_name != student.class_name:
+        raise HTTPException(
+            status_code=403,
+            detail=f"شما مجاز به ثبت نمره برای کلاس {student.class_name} نیستید. کلاس شما: {teacher.class_name}"
+        )
+
+    new_grade = Grade(
+        student_id=grade_data.student_id,
+        subject=grade_data.subject,
+        score=grade_data.score,
+        date=grade_data.date
+    )
+    db.add(new_grade)
     db.commit()
-    return {"message": "نمره با موفقیت توسط دبیر ثبت شد."}
+    db.refresh(new_grade)
+    return new_grade
 
 
-@router.post("/attendance")
-def add_attendance(data: AttendanceCreate, db: Session = Depends(get_db), user: dict = Depends(require_teacher)):
-    record = Attendance(student_id=data.student_id, date=data.date, status=data.status)
-    db.add(record)
+# ۴. ثبت حضور و غیاب توسط معلم (با بررسی هوشمند کلاس)
+@router.post("/{teacher_id}/attendances", response_model=AttendanceResponse, status_code=201)
+def add_attendance(teacher_id: int, attendance_data: AttendanceCreate, db: Session = Depends(get_db)):
+    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="معلم یافت نشد")
+
+    student = db.query(Student).filter(Student.id == attendance_data.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="دانش‌آموز یافت نشد")
+
+    if teacher.class_name != student.class_name:
+        raise HTTPException(
+            status_code=403,
+            detail=f"شما مجاز به ثبت غیبت برای کلاس {student.class_name} نیستید."
+        )
+
+    new_attendance = Attendance(
+        student_id=attendance_data.student_id,
+        date=attendance_data.date,
+        status=attendance_data.status
+    )
+    db.add(new_attendance)
     db.commit()
-    return {"message": "وضعیت حضور/غیاب ثبت شد"}
+    db.refresh(new_attendance)
+    return new_attendance
 
 
-@router.post("/monthly-report")
-def create_monthly_report(data: MonthlyReportCreate, db: Session = Depends(get_db), user: dict = Depends(require_teacher)):
-    content = f"📋 گزارش ماهانه ({data.month})\n\n🔹 وضعیت تحصیلی: {data.academic_comment}\n🔹 وضعیت انضباطی: {data.behavior_comment}"
-    report = Report(student_id=data.student_id, content=content, status="pending")
-    db.add(report)
+# ۵. ثبت گزارش ماهانه توسط معلم (میره پیش مدیر برای تأیید)
+@router.post("/{teacher_id}/monthly-report", response_model=ReportResponse, status_code=201)
+def create_monthly_report(teacher_id: int, report_data: MonthlyReportCreate, db: Session = Depends(get_db)):
+    teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
+    if not teacher:
+        raise HTTPException(status_code=404, detail="معلم یافت نشد")
+
+    student = db.query(Student).filter(Student.id == report_data.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="دانش‌آموز یافت نشد")
+
+    if teacher.class_name != student.class_name:
+        raise HTTPException(
+            status_code=403,
+            detail=f"شما مجاز به ثبت گزارش برای کلاس {student.class_name} نیستید."
+        )
+
+    # ساخت محتوای گزارش از ترکیب وضعیت تحصیلی و انضباطی
+    content = f"گزارش ماه {report_data.month}\n\n"
+    content += f"وضعیت تحصیلی: {report_data.academic_comment}\n\n"
+    content += f"وضعیت انضباطی: {report_data.behavior_comment}"
+
+    new_report = Report(
+        student_id=report_data.student_id,
+        content=content,
+        status="pending"  # منتظر تأیید مدیر
+    )
+    db.add(new_report)
     db.commit()
-    return {"message": "گزارش ماهانه ثبت شد و در انتظار تأیید مدیر است."}
+    db.refresh(new_report)
+    return new_report

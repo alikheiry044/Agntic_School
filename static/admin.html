@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل مدیریت مدرسه</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="navbar">
+        <h3>پنل مدیریت سامانه هوشمند مدرسه</h3>
+        <button class="btn-primary" style="width: auto; padding: 8px 16px;" onclick="logout()">خروج</button>
+    </div>
+
+    <div class="main-content">
+        <!-- افزودن معلم جدید -->
+        <div class="card">
+            <h4>تعریف دبیر جدید</h4>
+            <form id="createTeacherForm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                <input type="text" id="tName" placeholder="نام و نام خانوادگی" required class="form-group input">
+                <input type="text" id="tSubject" placeholder="درس (مثلا: ریاضی)" required class="form-group input">
+                <input type="text" id="tClass" placeholder="کلاس (مثلا: ۱۰-الف)" required class="form-group input">
+                <input type="text" id="tUsername" placeholder="نام کاربری" required class="form-group input">
+                <input type="password" id="tPassword" placeholder="رمز عبور" required class="form-group input">
+                <button type="submit" class="btn-primary" style="grid-column: 1 / -1;">ثبت دبیر</button>
+            </form>
+        </div>
+
+        <!-- لیست دبیران -->
+        <div class="card">
+            <h4>لیست دبیران مدرسه</h4>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>شناسه</th>
+                        <th>نام دبیر</th>
+                        <th>ماده درسی</th>
+                        <th>کلاس</th>
+                        <th>نام کاربری</th>
+                    </tr>
+                </thead>
+                <tbody id="teachersTableBody">
+                    <!-- داده‌ها به‌صورت دینامیک لود می‌شوند -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+    <script>
+        // لود لیست دبیران در هنگام باز شدن صفحه
+        document.addEventListener('DOMContentLoaded', loadTeachers);
+    </script>
+</body>
+</html>

@@ -2,11 +2,11 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 from sqlalchemy.orm import Session
+from app.database import get_db, SessionLocal
 
-from ..analytics import get_school_wide_report
-
+from app.models import Student, Report, Grade, Attendance
 load_dotenv()
-
+from app.agent.analytics import get_school_wide_report
 client = OpenAI(
     api_key=os.getenv("METIS_API_KEY"),
     base_url=os.getenv("METIS_BASE_URL"),

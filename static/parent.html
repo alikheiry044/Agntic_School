@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>پنل اولیا و دانش‌آموز</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body { font-family: Tahoma, sans-serif; background: #0f172a; color: #fff; padding: 20px; }
+        .card { background: rgba(30, 41, 59, 0.85); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(6, 182, 212, 0.3); }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid rgba(255,255,255,0.1); padding: 10px; text-align: center; }
+        th { background: rgba(6, 182, 212, 0.2); }
+    </style>
+</head>
+<body>
+    <div style="max-width: 800px; margin: auto;">
+        <h2>پنل گزارش عملکرد دانش‌آموز</h2>
+        <button onclick="logout()" style="float: left; padding: 5px 15px; background: #ef4444; color: #fff; border: none; border-radius: 5px; cursor: pointer;">خروج</button>
+
+        <div class="card">
+            <h3>📝 کارنامه و نمرات</h3>
+            <table>
+                <thead><tr><th>درس</th><th>نمره</th><th>تاریخ</th></tr></thead>
+                <tbody id="gradesTable"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>📅 وضعیت حضور و غیاب</h3>
+            <table>
+                <thead><tr><th>تاریخ</th><th>وضعیت</th></tr></thead>
+                <tbody id="attendanceTable"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>💰 وضعیت مالی و اقساط</h3>
+            <table>
+                <thead><tr><th>عنوان قسط</th><th>مبلغ</th><th>وضعیت</th></tr></thead>
+                <tbody id="tuitionTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function loadParentData() {
+            // فرض بر این است که شناسه دانش‌آموز یا توکن ذخیره شده است
+            const studentId = 1; // مقدار تستی
+            const res = await fetch(`http://127.0.0.1:8000/parent/dashboard/${studentId}`);
+            const data = await res.json();
+
+            document.getElementById("gradesTable").innerHTML = data.grades.map(g => `<tr><td>${g.subject}</td><td>${g.score}</td><td>${g.date}</td></tr>`).join("");
+            document.getElementById("attendanceTable").innerHTML = data.attendance.map(a => `<tr><td>${a.date}</td><td>${a.status}</td></tr>`).join("");
+            document.getElementById("tuitionTable").innerHTML = data.tuition.map(t => `<tr><td>${t.term}</td><td>${t.amount}</td><td>${t.status}</td></tr>`).join("");
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = "/";
+        }
+
+        loadParentData();
+    </script>
+</body>
+</html>

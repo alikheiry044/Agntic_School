@@ -11,18 +11,26 @@ class StudentBase(BaseModel):
 
 
 class StudentCreate(StudentBase):
+    parent_phone: Optional[str] = None
     password: Optional[str] = "1234"
 
-
-class StudentResponse(StudentBase):
-    id: int
-
-    model_config = ConfigDict(from_attributes=True)
 
 class StudentUpdate(BaseModel):
     name: Optional[str] = None
     class_name: Optional[str] = None
     parent_name: Optional[str] = None
+    parent_phone: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
+
+
+class StudentResponse(StudentBase):
+    id: int
+    parent_phone: Optional[str] = None
+    telegram_chat_id: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 # ===== اسکیماهای نمره =====
 class GradeCreate(BaseModel):
     student_id: int
@@ -65,7 +73,7 @@ class ExamResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# ===== اسکیماهای شهریه (جدید) =====
+# ===== اسکیماهای شهریه =====
 class TuitionCreate(BaseModel):
     student_id: int
     amount: float
@@ -122,19 +130,22 @@ class TeacherLogin(BaseModel):
     username: str
     password: str
 
+
 class MonthlyReportCreate(BaseModel):
     student_id: int
     month: str             # مثلاً "مهر" یا "آبان"
     academic_comment: str  # وضعیت تحصیلی
     behavior_comment: str  # وضعیت انضباطی
 
-# ===== اسکیماهای دبیر (جدید) =====
+
+# ===== اسکیماهای دبیر =====
 class TeacherCreate(BaseModel):
     name: str
     subject: str        # درس مربوطه (مثلا: ریاضی)
     class_name: str     # کلاسی که تدریس می‌کند
     username: str
     password: str
+
 
 class TeacherResponse(BaseModel):
     id: int
@@ -146,7 +157,7 @@ class TeacherResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-
+# ===== اسکیمای پیامک جلسه اولیا =====
 class ParentMeetingSMS(BaseModel):
     class_name: Optional[str] = None  # اگر None باشد برای کل مدرسه ارسال می‌شود
     meeting_date: str                 # مثلا: "چهارشنبه ۱۵ مهر ساعت ۱۶"

@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from openai import OpenAI
 from sqlalchemy.orm import Session
-
+from app.database import get_db, SessionLocal
 from ..analytics import check_grade_drop, check_unusual_absence
 from ..models import Student
 
