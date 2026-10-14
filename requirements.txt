@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+jinja2
+python-dotenv
+python-multipart
+passlib
+bcrypt
+python-jose
+openai
+kavenegar
+openpyxl

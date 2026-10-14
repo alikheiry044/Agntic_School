@@ -1,7 +1,9 @@
 .venv/
+**/.venv/
 __pycache__/
-*.pyc
+*.py[cod]
+.idea/
 .env
-school.db
 *.db
 
+Agntic_School/
